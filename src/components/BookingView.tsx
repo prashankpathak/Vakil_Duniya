@@ -37,7 +37,7 @@ export function BookingView() {
 
     setSubmitting(true);
     
-    // Attempt to open UPI intent with lawyer's fee to the owner's UPI ID
+    // Attempt to open UPI intent with full consultation fee to the owner's UPI ID
     window.location.href = `upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=${lawyer.consultation_fee}&cu=INR`;
 
     // Simulate payment passing and auto-booking

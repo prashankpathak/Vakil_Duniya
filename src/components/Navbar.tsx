@@ -51,7 +51,7 @@ export function Navbar() {
                onClick={() => navigate('admin')}
                className="px-6 py-2 border border-[#c5a059] text-[#c5a059] text-xs uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-all whitespace-nowrap"
             >
-              Lawyer Portal
+              Owner Portal
             </button>
           </div>
         </nav>

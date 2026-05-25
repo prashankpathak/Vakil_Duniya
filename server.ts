@@ -119,7 +119,7 @@ async function startServer() {
 
   app.post("/api/owner/login", (req, res) => {
     const { passcode } = req.body;
-    if (passcode === "prashank123") {
+    if (passcode === "Prashank@2009") {
       res.json({ success: true, token: "owner_secret_token" });
     } else {
       res.status(401).json({ error: "Unauthorized" });
