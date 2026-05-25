@@ -15,6 +15,8 @@ export interface Lawyer {
   language: string[];
   rating: number;
   image: string;
+  upi_id?: string;
+  mobile_number?: string;
 }
 
 export interface BookingRequest {

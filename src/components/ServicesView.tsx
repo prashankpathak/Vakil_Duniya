@@ -18,7 +18,7 @@ const item = {
   show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3 } }
 };
 
-const iconMap: Record<string, React.ReactNode> = {
+const iconMap: Record<string, any> = {
   Scale: <Scale className="w-8 h-8" />,
   Gavel: <Gavel className="w-8 h-8" />,
   Users: <Users className="w-8 h-8" />,

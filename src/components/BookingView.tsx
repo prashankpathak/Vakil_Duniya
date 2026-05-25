@@ -31,44 +31,97 @@ export function BookingView() {
       });
   }, [selectedLawyerId, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!selectedLawyerId || !lawyer) return;
 
     setSubmitting(true);
-    
-    // Attempt to open UPI intent with full consultation fee to the owner's UPI ID
-    window.location.href = `upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=${lawyer.consultation_fee}&cu=INR`;
+    const bookingFee = lawyer.consultation_fee;
 
-    // Simulate payment passing and auto-booking
-    setTimeout(async () => {
+    // Try Razorpay if script is available
+    if ((window as any).Razorpay) {
       try {
-        const payload: BookingRequest = {
-          ...formData,
-          lawyer_id: selectedLawyerId
-        };
-
-        const res = await fetch('/api/book', {
+        const orderRes = await fetch('/api/create-razorpay-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ amount: bookingFee })
         });
-
-        if (res.ok) {
-          setSuccess(true);
-        } else {
-          alert("Booking failed. Please try again.");
+        
+        if (!orderRes.ok) {
+           throw new Error("Razorpay Order failed. Fallback to UPI Intent.");
         }
+        
+        const orderInfo = await orderRes.json();
+        const razorpayKey = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || "rzp_test_change_me";
+        
+        const options = {
+          key: razorpayKey,
+          name: "Vakil Duniya",
+          description: "Consultation Fee",
+          order_id: orderInfo.id,
+          handler: async function (response: any) {
+            await finalizeBooking();
+          },
+          prefill: {
+            name: formData.name,
+            contact: formData.mobile,
+          },
+          theme: {
+            color: "#c5a059"
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (response: any){
+           alert("Payment failed");
+           setSubmitting(false);
+        });
+        rzp.open();
+        return; // wait for handler
       } catch (err) {
-        console.error(err);
-        alert("An error occurred.");
-      } finally {
-        setSubmitting(false);
+        console.warn("Razorpay error, falling back to UPI intent", err);
       }
-    }, 4000); // 4 second delay to simulate payment confirmation phase
+    }
+
+    // Fallback/UPI Intent attempt
+    window.location.href = `upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=${bookingFee}&cu=INR`;
+    
+    // Simulate booking
+    setTimeout(async () => {
+      await finalizeBooking();
+    }, 4000);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const finalizeBooking = async () => {
+    try {
+      const payload: BookingRequest = {
+        ...formData,
+        lawyer_id: selectedLawyerId as string
+      };
+
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setSuccess(true);
+        const text = `*New Booking Received!*\n\n*Client Name:* ${formData.name}\n*Mobile:* ${formData.mobile}\n*Case Type:* ${formData.case_type}\n*Appointment Date:* ${formData.appointment_date}\n*Lawyer:* ${lawyer?.name}\n*Consultation Fee:* ₹${lawyer?.consultation_fee}`;
+        const waLink = `https://api.whatsapp.com/send?phone=916263364561&text=${encodeURIComponent(text)}`;
+        window.open(waLink, '_blank');
+      } else {
+        alert("Booking failed. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: any) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -94,12 +147,23 @@ export function BookingView() {
             Your appointment with <span className="text-white font-medium">{lawyer.name}</span> on <span className="text-white font-medium">{formData.appointment_date}</span> has been initialized. 
             We will contact you shortly on {formData.mobile} for final confirmation.
           </p>
-          <button
-            onClick={() => navigate('home')}
-            className="bg-[#c5a059] text-black px-8 py-3 text-sm font-bold uppercase tracking-widest hover:brightness-110 transition-colors"
-          >
-            Return Home
-          </button>
+
+          <div className="flex flex-col items-center justify-center gap-4">
+            <a 
+              href={`https://api.whatsapp.com/send?phone=916263364561&text=${encodeURIComponent(`*New Booking Received!*\n\n*Client Name:* ${formData.name}\n*Mobile:* ${formData.mobile}\n*Case Type:* ${formData.case_type}\n*Appointment Date:* ${formData.appointment_date}\n*Lawyer:* ${lawyer?.name}\n*Consultation Fee:* ₹${lawyer?.consultation_fee}`)}`}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-green-600 text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-500 transition-colors rounded inline-flex items-center"
+            >
+              Confirm on WhatsApp
+            </a>
+            <button
+              onClick={() => navigate('home')}
+              className="text-xs font-bold uppercase tracking-widest text-[#c5a059] hover:text-white transition-colors mt-4"
+            >
+              Return Home
+            </button>
+          </div>
         </div>
       ) : (
         <div className="bg-[#111] border border-white/5 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-2 overflow-hidden">
@@ -136,8 +200,11 @@ export function BookingView() {
             </div>
 
             <div className="mt-auto">
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total Fee</p>
-              <p className="text-4xl font-serif text-[#c5a059]">₹{lawyer.consultation_fee}</p>
+              <div className="mt-4 bg-[#111] border border-[#c5a059]/20 p-4 rounded-lg">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Total Fee (Pay Now)</p>
+                <p className="text-2xl font-serif text-[#c5a059]">₹{lawyer.consultation_fee}</p>
+                <p className="text-[10px] text-gray-500 mt-2">100% secure payment for confirmation.</p>
+              </div>
             </div>
           </div>
 
@@ -231,11 +298,11 @@ export function BookingView() {
                   disabled={submitting}
                   className="w-full bg-[#c5a059] text-black px-6 py-4 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                 >
-                  {submitting ? 'Waiting for Payment & Booking...' : `Pay ₹${lawyer.consultation_fee} via UPI & Book`}
+                  {submitting ? 'Processing Payment...' : `Pay Now (₹${lawyer.consultation_fee}) & Book`}
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
                 </button>
                 <p className="mt-4 text-[10px] text-center text-gray-500 uppercase tracking-wider">
-                  Clicking this will open your UPI app. After payment, your booking will be automatically confirmed!
+                  Secure checkout via Razorpay (Cards, UPI, NetBanking).
                 </p>
               </div>
             </form>

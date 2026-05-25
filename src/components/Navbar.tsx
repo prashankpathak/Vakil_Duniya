@@ -51,7 +51,7 @@ export function Navbar() {
                onClick={() => navigate('admin')}
                className="px-6 py-2 border border-[#c5a059] text-[#c5a059] text-xs uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-all whitespace-nowrap"
             >
-              Owner Portal
+              Add Lawyer
             </button>
           </div>
         </nav>
@@ -72,10 +72,10 @@ export function Navbar() {
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: 'calc(100vh - 5rem)' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="sm:hidden border-t border-white/10 bg-[#080808] absolute w-full left-0 top-20 shadow-xl overflow-hidden"
+            className="lg:hidden border-t border-white/10 bg-black absolute w-full left-0 top-20 shadow-2xl overflow-y-auto z-50"
           >
             <div className="pt-2 pb-3 space-y-1">
               {navLinks.map((link) => (
@@ -94,15 +94,24 @@ export function Navbar() {
                   {link.label}
                 </button>
               ))}
-              <div className="px-4 mt-4 mb-2">
+              <div className="px-4 mt-4 mb-2 space-y-3">
                 <button
                    onClick={() => {
                      navigate('admin');
                      setIsOpen(false);
                    }}
-                   className="w-full px-6 py-3 border border-[#c5a059] text-[#c5a059] text-xs uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-all text-center"
+                   className="w-full px-6 py-4 border border-[#c5a059] text-[#c5a059] text-xs font-bold uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-all text-center"
                 >
                   Lawyer Portal
+                </button>
+                <button
+                   onClick={() => {
+                     navigate('owner-login');
+                     setIsOpen(false);
+                   }}
+                   className="w-full px-6 py-4 border border-white/10 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all text-center"
+                >
+                  Owner Portal
                 </button>
               </div>
             </div>

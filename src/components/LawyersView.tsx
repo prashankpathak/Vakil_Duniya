@@ -22,6 +22,9 @@ const item = {
 export function LawyersView() {
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedSpecialization, setSelectedSpecialization] = useState('');
   const { bookLawyer } = useNavigationStore();
 
   useEffect(() => {
@@ -37,21 +40,71 @@ export function LawyersView() {
       });
   }, []);
 
+  const uniqueCities = Array.from(new Set(lawyers.map(l => l.city))).sort();
+  const uniqueSpecializations = Array.from(new Set(lawyers.map(l => l.specialization))).sort();
+
+  const filteredLawyers = lawyers.filter(lawyer => {
+    const matchesSearch = lawyer.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCity = selectedCity ? lawyer.city === selectedCity : true;
+    const matchesSpec = selectedSpecialization ? lawyer.specialization === selectedSpecialization : true;
+    return matchesSearch && matchesCity && matchesSpec;
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10 w-full">
-      <div className="border-b border-white/10 pb-5 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+      <div className="border-b border-white/10 pb-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-serif font-bold text-white">Find Verified Lawyers</h2>
           <p className="mt-2 max-w-4xl text-sm text-gray-400 font-sans font-light">
             Browse our network of experienced legal professionals and book a consultation today.
           </p>
         </div>
-        <span className="text-[10px] text-[#c5a059] underline underline-offset-4 cursor-pointer uppercase tracking-[0.2em] font-bold">Search Filter</span>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+         <input 
+           type="text" 
+           placeholder="Search lawyer by name..." 
+           value={searchQuery}
+           onChange={(e) => setSearchQuery(e.target.value)}
+           className="bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+         />
+         <select
+           value={selectedCity}
+           onChange={(e) => setSelectedCity(e.target.value)}
+           className="bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+         >
+           <option value="">All Cities</option>
+           {uniqueCities.map(city => (
+             <option key={city} value={city}>{city}</option>
+           ))}
+         </select>
+         <select
+           value={selectedSpecialization}
+           onChange={(e) => setSelectedSpecialization(e.target.value)}
+           className="bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+         >
+           <option value="">All Specializations</option>
+           {uniqueSpecializations.map(spec => (
+             <option key={spec} value={spec}>{spec}</option>
+           ))}
+         </select>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#c5a059]"></div>
+        </div>
+      ) : filteredLawyers.length === 0 ? (
+        <div className="text-center py-20 bg-[#111] border border-white/5 rounded-xl">
+           <h3 className="text-[#c5a059] font-serif text-xl mb-2">No Lawyers Found</h3>
+           <p className="text-gray-400 text-sm font-light">Try adjusting your search criteria or resetting filters.</p>
+           <button 
+             onClick={() => { setSearchQuery(''); setSelectedCity(''); setSelectedSpecialization(''); }}
+             className="mt-6 text-xs text-[#c5a059] uppercase tracking-widest font-bold border border-[#c5a059] px-6 py-2 hover:bg-[#c5a059] hover:text-black transition-colors"
+           >
+             Reset Filters
+           </button>
         </div>
       ) : (
         <motion.div 
@@ -60,7 +113,7 @@ export function LawyersView() {
           animate="show"
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-          {lawyers.map((lawyer) => (
+          {filteredLawyers.map((lawyer) => (
             <motion.div 
               variants={item}
               key={lawyer.id} 

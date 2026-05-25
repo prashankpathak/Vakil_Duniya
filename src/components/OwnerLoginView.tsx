@@ -8,7 +8,7 @@ export function OwnerLoginView() {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError(false);
@@ -41,7 +41,7 @@ export function OwnerLoginView() {
         <ArrowLeft className="w-4 h-4 mr-2 text-[#c5a059] group-hover:text-white transition-colors" /> Back to Home
       </button>
 
-      <div className="bg-[#111] border border-white/5 rounded-xl shadow-sm p-8 text-center">
+      <div className="bg-[#111] border border-white/5 mx-2 sm:mx-0 rounded-xl shadow-sm p-6 sm:p-8 text-center">
         <div className="w-12 h-12 bg-[#050505] rounded-full mx-auto mb-6 flex items-center justify-center border border-white/10">
            <Lock className="w-5 h-5 text-[#c5a059]" />
         </div>

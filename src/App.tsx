@@ -14,13 +14,13 @@ export default function App() {
   const { currentPage, navigate } = useNavigationStore();
 
   return (
-    <div className="min-h-screen bg-[#050505] font-sans text-[#e0e0e0] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#050505] font-sans text-[#e0e0e0] flex flex-col relative">
       {/* Background Subtle Texture */}
       <div className="fixed inset-0 opacity-5 pointer-events-none z-0">
         <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(#c5a059 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
       </div>
       
-      <div className="relative z-10 flex flex-col flex-grow min-h-screen overflow-y-auto w-full">
+      <div className="relative z-10 flex flex-col flex-grow w-full">
         <Navbar />
         <main className="flex-grow flex flex-col relative">
           <AnimatePresence mode="wait">
@@ -44,6 +44,29 @@ export default function App() {
         </main>
         
         <ChatBot />
+
+        <div className="fixed bottom-6 left-4 sm:left-6 z-50 flex flex-col gap-3 items-start">
+          <button
+            onClick={() => navigate('lawyers')}
+            className="bg-[#111] border border-[#c5a059] text-[#c5a059] px-4 py-3 rounded-full shadow-lg flex items-center justify-center hover:bg-[#c5a059] hover:text-black transition-colors font-bold uppercase tracking-widest text-[10px] sm:text-xs"
+          >
+            <span className="mr-2">🔍</span> Find Lawyers
+          </button>
+          
+          <button
+            onClick={() => navigate('services')}
+            className="bg-[#111] border border-[#c5a059] text-[#c5a059] px-4 py-3 rounded-full shadow-lg flex items-center justify-center hover:bg-[#c5a059] hover:text-black transition-colors font-bold uppercase tracking-widest text-[10px] sm:text-xs"
+          >
+            <span className="mr-2">🏛️</span> Services
+          </button>
+
+          <button
+            onClick={() => navigate('admin')}
+            className="bg-[#111] border border-[#c5a059] text-[#c5a059] px-4 py-3 rounded-full shadow-lg flex items-center justify-center hover:bg-[#c5a059] hover:text-black transition-colors font-bold uppercase tracking-widest text-[10px] sm:text-xs"
+          >
+            <span className="mr-2">⚖️</span> Lawyer Portal
+          </button>
+        </div>
         
         {/* Bottom Bar Info / Footer */}
         <footer className="h-auto min-h-16 border-t border-white/5 px-4 sm:px-6 lg:px-12 py-4 flex flex-col lg:flex-row items-center justify-between bg-[#050505] mt-auto shrink-0 gap-4 lg:gap-0">

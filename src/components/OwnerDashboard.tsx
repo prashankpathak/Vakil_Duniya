@@ -27,6 +27,18 @@ export function OwnerDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [isAdding, setIsAdding] = useState(false);
+  const [newLawyer, setNewLawyer] = useState({
+    name: '',
+    specialization: '',
+    experience: '',
+    consultation_fee: '',
+    city: '',
+    language: 'English, Hindi',
+    upi_id: '',
+    mobile_number: '',
+  });
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -56,6 +68,27 @@ export function OwnerDashboard() {
       const res = await fetch(`/api/lawyers/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setLawyers(lawyers.filter(l => l.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddLawyer = async (e: any) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/lawyers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newLawyer,
+          language: newLawyer.language.split(',').map(l => l.trim())
+        })
+      });
+      if (res.ok) {
+        setIsAdding(false);
+        setNewLawyer({ name: '', specialization: '', experience: '', consultation_fee: '', city: '', language: 'English, Hindi', upi_id: '', mobile_number: '' });
+        fetchData(); // reload
       }
     } catch (err) {
       console.error(err);
@@ -96,8 +129,33 @@ export function OwnerDashboard() {
             <div className="mb-6 flex items-center gap-2 border-b border-white/10 pb-4">
                <Anchor className="w-5 h-5 text-[#c5a059]" />
                <h3 className="text-xl font-serif text-white">Registered Lawyers</h3>
-               <span className="ml-auto bg-[#111] text-[#c5a059] px-3 py-1 rounded text-xs border border-white/5 font-mono">{lawyers.length}</span>
+               <span className="bg-[#111] text-[#c5a059] px-3 py-1 rounded text-xs border border-white/5 font-mono mr-auto">{lawyers.length}</span>
+               <button 
+                 onClick={() => setIsAdding(!isAdding)}
+                 className="bg-[#c5a059] text-black px-4 py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-colors"
+               >
+                 {isAdding ? "Cancel" : "Add Lawyer Free"}
+               </button>
             </div>
+
+            {isAdding && (
+              <form onSubmit={handleAddLawyer} className="mb-8 bg-[#111] border border-[#c5a059]/30 rounded-xl p-6 relative">
+                 <h4 className="text-lg font-serif text-[#c5a059] mb-4">Add New Lawyer Directly</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <input required type="text" placeholder="Lawyer Name" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.name} onChange={e => setNewLawyer({...newLawyer, name: e.target.value})} />
+                   <input required type="text" placeholder="Specialization (e.g. Criminal Law)" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.specialization} onChange={e => setNewLawyer({...newLawyer, specialization: e.target.value})} />
+                   <input required type="text" placeholder="Years of Experience (e.g. 10)" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.experience} onChange={e => setNewLawyer({...newLawyer, experience: e.target.value})} />
+                   <input required type="number" placeholder="Consultation Fee (₹)" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.consultation_fee} onChange={e => setNewLawyer({...newLawyer, consultation_fee: e.target.value})} />
+                   <input required type="text" placeholder="City" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.city} onChange={e => setNewLawyer({...newLawyer, city: e.target.value})} />
+                   <input required type="text" placeholder="Languages (comma separated)" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.language} onChange={e => setNewLawyer({...newLawyer, language: e.target.value})} />
+                   <input required type="text" placeholder="Lawyer UPI ID" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.upi_id} onChange={e => setNewLawyer({...newLawyer, upi_id: e.target.value})} />
+                   <input required type="text" placeholder="Lawyer Mobile Number" className="bg-[#050505] border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none" value={newLawyer.mobile_number} onChange={e => setNewLawyer({...newLawyer, mobile_number: e.target.value})} />
+                 </div>
+                 <button type="submit" className="mt-4 bg-[#c5a059] text-black px-6 py-3 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-colors">
+                   Save Lawyer
+                 </button>
+              </form>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                {lawyers.map(lawyer => (
@@ -105,8 +163,12 @@ export function OwnerDashboard() {
                     <h4 className="text-lg font-serif text-white">{lawyer.name}</h4>
                     <p className="text-xs tracking-widest uppercase text-[#c5a059] mt-1 mb-4">{lawyer.specialization}</p>
                     <div className="space-y-2 text-sm text-gray-400 font-sans">
+                       <p>Exp: <span className="text-white">{lawyer.experience}</span></p>
                        <p>City: <span className="text-white">{lawyer.city}</span></p>
+                       <p>Lang: <span className="text-white">{lawyer.language.join(', ')}</span></p>
                        <p>Fee: <span className="text-white font-mono">₹{lawyer.consultation_fee}</span></p>
+                       {lawyer.mobile_number && <p>Mobile: <span className="text-white font-mono">{lawyer.mobile_number}</span></p>}
+                       {lawyer.upi_id && <p>UPI: <span className="text-white font-mono">{lawyer.upi_id}</span></p>}
                     </div>
                     <button 
                        onClick={() => deleteLawyer(lawyer.id)}
@@ -136,7 +198,7 @@ export function OwnerDashboard() {
                         <th className="px-4 py-4 font-normal">Client</th>
                         <th className="px-4 py-4 font-normal">Case</th>
                         <th className="px-4 py-4 font-normal">Date</th>
-                        <th className="px-4 py-4 font-normal">Lawyer ID</th>
+                        <th className="px-4 py-4 font-normal">Lawyer</th>
                         <th className="px-4 py-4 font-normal text-right">Payment</th>
                      </tr>
                   </thead>
@@ -147,7 +209,9 @@ export function OwnerDashboard() {
                            <td className="px-4 py-4"><div className="text-white font-serif">{booking.name}</div><div className="text-[10px] text-[#c5a059] tracking-wider">{booking.mobile}</div></td>
                            <td className="px-4 py-4">{booking.case_type}</td>
                            <td className="px-4 py-4">{new Date(booking.appointment_date).toLocaleDateString()}</td>
-                           <td className="px-4 py-4 font-mono">{booking.lawyer_id}</td>
+                           <td className="px-4 py-4 font-mono text-white">
+                             {lawyers.find(l => l.id === booking.lawyer_id)?.name || booking.lawyer_id}
+                           </td>
                            <td className="px-4 py-4 text-right">
                                <span className={`inline-block px-2 py-1 text-[10px] uppercase font-bold tracking-widest rounded ${booking.payment_status === 'Paid' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
                                  {booking.payment_status}

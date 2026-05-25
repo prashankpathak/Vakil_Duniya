@@ -1,7 +1,9 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import Razorpay from "razorpay";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -12,13 +14,57 @@ const ai = new GoogleGenAI({
   }
 });
 
+let razorpayInstance: Razorpay | null = null;
+function getRazorpay(): Razorpay | null {
+  if (!razorpayInstance) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return null;
+    }
+    razorpayInstance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+  }
+  return razorpayInstance;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
 
-  // --- MOCK DATA ---
+  // --- MOCK DATA / PERSISTENCE ---
+  const DATA_FILE = path.join(process.cwd(), "database.json");
+
+  function loadData() {
+    if (fs.existsSync(DATA_FILE)) {
+      try {
+        const raw = fs.readFileSync(DATA_FILE, "utf-8");
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error("Error reading database.json", e);
+      }
+    }
+    return {
+      lawyers: [
+        { id: 'l1', name: "Advocate Pathak", specialization: "Civil & Criminal", experience: "5 Years", consultation_fee: 599, city: "Jabalpur", language: ["Hindi", "English"], rating: 4.8, image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80" },
+        { id: 'l2', name: "Advocate Sharma", specialization: "Family Matter", experience: "8 Years", consultation_fee: 599, city: "Delhi", language: ["Hindi", "English"], rating: 4.9, image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80" },
+        { id: 'l3', name: "Advocate Singh", specialization: "Property Dispute", experience: "12 Years", consultation_fee: 799, city: "Mumbai", language: ["English", "Marathi"], rating: 4.7, image: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80" },
+        { id: 'l4', name: "Advocate Verma", specialization: "Corporate Law", experience: "4 Years", consultation_fee: 899, city: "Bangalore", language: ["English"], rating: 4.5, image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80" },
+      ],
+      bookings: []
+    };
+  }
+
+  function saveData(data: any) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+  }
+
+  const db = loadData();
+  const lawyers = db.lawyers;
+  const bookings = db.bookings;
+
   const services = [
     { id: 's1', name: 'Civil Consultation', fee: 599, icon: 'Scale' },
     { id: 's2', name: 'Criminal Consultation', fee: 799, icon: 'Gavel' },
@@ -27,15 +73,6 @@ async function startServer() {
     { id: 's5', name: 'Legal Notice Drafting', fee: 899, icon: 'FileText' },
     { id: 's6', name: 'Bail Consultation', fee: 999, icon: 'Unlock' },
   ];
-
-  const lawyers = [
-    { id: 'l1', name: "Advocate Pathak", specialization: "Civil & Criminal", experience: "5 Years", consultation_fee: 599, city: "Jabalpur", language: ["Hindi", "English"], rating: 4.8, image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80" },
-    { id: 'l2', name: "Advocate Sharma", specialization: "Family Matter", experience: "8 Years", consultation_fee: 599, city: "Delhi", language: ["Hindi", "English"], rating: 4.9, image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80" },
-    { id: 'l3', name: "Advocate Singh", specialization: "Property Dispute", experience: "12 Years", consultation_fee: 799, city: "Mumbai", language: ["English", "Marathi"], rating: 4.7, image: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&q=80" },
-    { id: 'l4', name: "Advocate Verma", specialization: "Corporate Law", experience: "4 Years", consultation_fee: 899, city: "Bangalore", language: ["English"], rating: 4.5, image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80" },
-  ];
-
-  const bookings: any[] = [];
 
   // --- API ROUTES ---
   app.get("/api/health", (req, res) => {
@@ -54,6 +91,7 @@ async function startServer() {
     const index = lawyers.findIndex(l => l.id === req.params.id);
     if (index > -1) {
       lawyers.splice(index, 1);
+      saveData({ lawyers, bookings });
       res.json({ success: true });
     } else {
       res.status(404).json({ error: "Not found" });
@@ -61,7 +99,7 @@ async function startServer() {
   });
 
   app.post("/api/lawyers", (req, res) => {
-    const { name, specialization, experience, consultation_fee, city, language, image } = req.body;
+    const { name, specialization, experience, consultation_fee, city, language, image, upi_id, mobile_number } = req.body;
     
     if (!name || !specialization || !experience || !consultation_fee || !city) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -76,10 +114,13 @@ async function startServer() {
       city,
       language: language || ["English"],
       rating: 5.0, // Default new lawyer rating
-      image: image || ""
+      image: image || "",
+      upi_id: upi_id || "",
+      mobile_number: mobile_number || ""
     };
 
     lawyers.push(newLawyer);
+    saveData({ lawyers, bookings });
     res.status(201).json({ message: "Lawyer added successfully", lawyer: newLawyer });
   });
 
@@ -103,11 +144,15 @@ async function startServer() {
     };
 
     bookings.push(newBooking);
+    saveData({ lawyers, bookings });
     
     // Simulate payment handling / confirmation delay
     setTimeout(() => {
         const index = bookings.findIndex(b => b.id === newBooking.id);
-        if(index > -1) bookings[index].payment_status = "Paid";
+        if(index > -1) {
+           bookings[index].payment_status = "Paid";
+           saveData({ lawyers, bookings });
+        }
     }, 2000);
 
     res.status(201).json({ message: "Booking initialized", booking: newBooking });
@@ -115,6 +160,27 @@ async function startServer() {
 
   app.get("/api/bookings", (req, res) => {
     res.json(bookings);
+  });
+
+  app.post("/api/create-razorpay-order", async (req, res) => {
+    try {
+      const { amount } = req.body;
+      if (!amount) return res.status(400).json({ error: "Missing amount" });
+      
+      const rzp = getRazorpay();
+      if (!rzp) {
+        return res.status(503).json({ error: "Razorpay is not configured on the server." });
+      }
+      const order = await rzp.orders.create({
+        amount: Math.round(amount * 100), // amount in paise
+        currency: "INR",
+        receipt: `receipt_${Date.now()}`
+      });
+      res.json(order);
+    } catch (err: any) {
+      console.error("Razorpay error:", err.message);
+      res.status(500).json({ error: err.message || "Failed to create Razorpay order." });
+    }
   });
 
   app.post("/api/owner/login", (req, res) => {
