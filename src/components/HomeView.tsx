@@ -1,5 +1,6 @@
 import { ShieldCheck, Video, CreditCard, Clock, Scale } from 'lucide-react';
 import { useNavigationStore } from '../store';
+import heroBg from '../assets/images/hero_lawyer_bg_1779709182651.png';
 
 export function HomeView() {
   const { navigate } = useNavigationStore();
@@ -13,8 +14,13 @@ export function HomeView() {
 
   return (
     <div className="flex-1 flex flex-col w-full relative z-10">
+      {/* Hero Background */}
+      <div 
+        className="absolute inset-0 z-0 opacity-40 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${heroBg})` }}
+      />
       {/* Hero Section */}
-      <div className="w-full flex flex-col xl:flex-row py-12 xl:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full flex flex-col xl:flex-row py-12 xl:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex-1 flex flex-col justify-center xl:pr-16 z-10">
           <div className="mb-6 inline-flex items-center gap-2 px-3 py-1 bg-[#c5a059]/10 border border-[#c5a059]/20 rounded-full w-fit">
             <span className="w-2 h-2 rounded-full bg-[#c5a059] animate-pulse"></span>

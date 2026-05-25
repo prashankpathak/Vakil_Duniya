@@ -15,8 +15,8 @@ export function Navbar() {
   ] as const;
 
   return (
-    <header className="h-20 px-4 sm:px-6 lg:px-12 flex flex-col justify-center border-b border-white/10 z-10 bg-[#050505] shrink-0 sticky top-0">
-      <div className="flex items-center justify-between">
+    <header className="h-20 px-4 sm:px-6 lg:px-12 flex flex-col justify-center border-b border-white/10 z-50 bg-black shrink-0 sticky top-0">
+      <div className="flex items-center justify-between bg-black">
         <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => navigate('home')}>
           <div className="w-10 h-10 bg-[#c5a059] rounded-sm flex items-center justify-center rotate-45 shrink-0">
             <span className="text-black font-bold -rotate-45 text-xl">V</span>
