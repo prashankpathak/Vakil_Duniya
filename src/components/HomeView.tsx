@@ -1,5 +1,6 @@
 import { ShieldCheck, Video, CreditCard, Clock, Scale } from 'lucide-react';
 import { useNavigationStore } from '../store';
+// @ts-ignore
 import heroBg from '../assets/images/hero_lawyer_bg_1779709182651.png';
 
 export function HomeView() {
@@ -7,8 +8,8 @@ export function HomeView() {
 
   const features = [
     { name: 'Verified Lawyers', description: 'Every lawyer on our platform goes through a strict verification process.', icon: <ShieldCheck className="w-5 h-5" /> },
-    { name: 'Online/Offline Options', description: 'Choose between seamless video consultations or in-person visits.', icon: <Video className="w-5 h-5" /> },
-    { name: 'Secure Payments', description: 'Pay minimum consultation fees securely via UPI or Card.', icon: <CreditCard className="w-5 h-5" /> },
+    { name: 'Online/Offline Options', description: 'Choose between seamless video consultations or in-person chamber visits.', icon: <Video className="w-5 h-5" /> },
+    { name: 'Direct Advisory', description: 'Direct legal guidance tailored to your specific case requirements.', icon: <Scale className="w-5 h-5" /> },
     { name: 'Fast Appointments', description: 'Find help when you need it without waiting weeks for an opening.', icon: <Clock className="w-5 h-5" /> },
   ];
 
@@ -34,7 +35,7 @@ export function HomeView() {
             सच्चे वकील, सही सलाह।
           </p>
           <p className="text-gray-400 text-base sm:text-lg max-w-xl mb-10 font-light leading-relaxed">
-            Expert legal consultation starting from ₹599. Book online appointments with verified specialists for civil, criminal, and family matters.<br/><br/>
+            Expert legal consultation at your convenience. Book online appointments with verified specialists for civil, criminal, and family matters.<br/><br/>
             <span className="font-hindi text-lg">न्याय आपका अधिकार है, और सही वकील चुनना आपका फैसला। <strong>वकील दुनिया</strong> - भरोसेमंद कानूनी सलाह, अब आपके करीब।</span>
           </p>
 

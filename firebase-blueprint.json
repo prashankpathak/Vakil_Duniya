@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data for registered clients and administrators",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth user identifier"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User full name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone or WhatsApp number"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["client", "admin", "lawyer"],
+          "description": "User account role"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Account last update timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Lawyer": {
+      "title": "Lawyer",
+      "description": "Verified legal specialist profile",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique lawyer document ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Advocate name"
+        },
+        "specialization": {
+          "type": "string",
+          "description": "Legal domain and specialization"
+        },
+        "experience": {
+          "type": "string",
+          "description": "Years of practice experience"
+        },
+        "consultation_fee": {
+          "type": "number",
+          "description": "Consultation fee in INR"
+        },
+        "city": {
+          "type": "string",
+          "description": "City of practice"
+        },
+        "language": {
+          "type": "array",
+          "description": "Languages spoken"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Client rating out of 5"
+        },
+        "image": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "mobile_number": {
+          "type": "string",
+          "description": "Lawyer contact number"
+        },
+        "consultation_mode": {
+          "type": "string",
+          "description": "Online Consultation or In-Office"
+        },
+        "bar_enrollment": {
+          "type": "string",
+          "description": "State Bar Council Enrollment Number"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Registration date"
+        }
+      },
+      "required": ["name", "specialization", "city"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Legal consultation appointment record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique booking identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Client user ID"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Client email address"
+        },
+        "name": {
+          "type": "string",
+          "description": "Client contact name"
+        },
+        "mobile": {
+          "type": "string",
+          "description": "Client mobile number"
+        },
+        "case_type": {
+          "type": "string",
+          "description": "Category of legal matter"
+        },
+        "appointment_date": {
+          "type": "string",
+          "description": "Date of requested consultation"
+        },
+        "lawyer_id": {
+          "type": "string",
+          "description": "Assigned lawyer identifier"
+        },
+        "lawyer_name": {
+          "type": "string",
+          "description": "Assigned lawyer name"
+        },
+        "lawyer_city": {
+          "type": "string",
+          "description": "Lawyer location city"
+        },
+        "lawyer_specialization": {
+          "type": "string",
+          "description": "Lawyer specialization area"
+        },
+        "consultation_mode": {
+          "type": "string",
+          "description": "Online Consultation or Physical Meeting"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Accepted", "Disposed", "Cancelled"],
+          "description": "Current status of the appointment"
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Administrative notes or hearing outcome"
+        },
+        "payment_status": {
+          "type": "string",
+          "description": "Status of consultation payment"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Booking submission timestamp"
+        }
+      },
+      "required": ["name", "mobile", "appointment_date", "lawyer_id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile directory with secure owner & admin access"
+    },
+    "/lawyers/{lawyerId}": {
+      "schema": "Lawyer",
+      "description": "Public directory of verified advocates and legal specialists"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Consultation appointments records"
+    }
+  }
+}

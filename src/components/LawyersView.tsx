@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldCheck, MapPin, Languages, Star, User } from 'lucide-react';
 import { Lawyer } from '../types';
 import { useNavigationStore } from '../store';
+import { subscribeToLawyers, fetchLawyersFromFirestore } from '../firebase';
 import { motion } from 'motion/react';
 
 const container = {
@@ -28,23 +29,47 @@ export function LawyersView() {
   const { bookLawyer } = useNavigationStore();
 
   useEffect(() => {
-    fetch('/api/lawyers')
-      .then(res => res.json())
-      .then(data => {
+    // Initial fetch from Firestore / server
+    fetchLawyersFromFirestore().then(data => {
+      if (data && data.length > 0) {
         setLawyers(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error fetching lawyers:", err);
-        setLoading(false);
-      });
+      }
+      setLoading(false);
+    });
+
+    // Real-time Firestore sync
+    const unsubscribe = subscribeToLawyers((updatedLawyers) => {
+      if (updatedLawyers && updatedLawyers.length > 0) {
+        setLawyers(updatedLawyers);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
-  const uniqueCities = Array.from(new Set(lawyers.map(l => l.city))).sort();
-  const uniqueSpecializations = Array.from(new Set(lawyers.map(l => l.specialization))).sort();
+  const approvedLawyers = lawyers.filter(lawyer => {
+    if (lawyer.approval_status === 'rejected') return false;
+    if (lawyer.approval_status === 'pending') return false;
+    if (lawyer.is_verified === false) return false;
+    return true;
+  });
 
-  const filteredLawyers = lawyers.filter(lawyer => {
-    const matchesSearch = lawyer.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const uniqueCities = Array.from(new Set(approvedLawyers.map(l => l.city))).sort();
+  const uniqueSpecializations = Array.from(new Set(approvedLawyers.map(l => l.specialization))).sort();
+
+  const filteredLawyers = approvedLawyers.filter(lawyer => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery ? (
+      lawyer.name.toLowerCase().includes(query) ||
+      lawyer.specialization.toLowerCase().includes(query) ||
+      lawyer.city.toLowerCase().includes(query) ||
+      lawyer.experience.toLowerCase().includes(query) ||
+      (lawyer.bar_enrollment && lawyer.bar_enrollment.toLowerCase().includes(query)) ||
+      lawyer.language.some(lang => lang.toLowerCase().includes(query))
+    ) : true;
     const matchesCity = selectedCity ? lawyer.city === selectedCity : true;
     const matchesSpec = selectedSpecialization ? lawyer.specialization === selectedSpecialization : true;
     return matchesSearch && matchesCity && matchesSpec;
@@ -64,7 +89,7 @@ export function LawyersView() {
       <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
          <input 
            type="text" 
-           placeholder="Search lawyer by name..." 
+           placeholder="Search by name, specialization, city, language..." 
            value={searchQuery}
            onChange={(e) => setSearchQuery(e.target.value)}
            className="bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
@@ -152,18 +177,24 @@ export function LawyersView() {
                    <Languages className="w-3 h-3 text-gray-500 xl:hidden inline" />
                   {lawyer.language.join(', ')}
                 </div>
+                {lawyer.consultation_mode && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-300 w-16">Mode:</span> {lawyer.consultation_mode}
+                  </div>
+                )}
+                {lawyer.bar_enrollment && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-300 w-16">Bar Reg:</span> <span className="text-[#c5a059] font-mono">{lawyer.bar_enrollment}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-end justify-between mt-auto">
-                <div>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest block mb-0.5">Fee</span>
-                  <div className="text-[#c5a059] font-serif font-bold text-xl">₹{lawyer.consultation_fee}</div>
-                </div>
+              <div className="mt-auto pt-4">
                 <button
                   onClick={() => bookLawyer(lawyer.id)}
-                  className="bg-transparent border border-[#c5a059] text-[#c5a059] px-4 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-colors rounded-sm"
+                  className="w-full bg-transparent border border-[#c5a059] text-[#c5a059] py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-[#c5a059] hover:text-black transition-colors rounded-sm text-center"
                 >
-                  Book
+                  Book Consultation
                 </button>
               </div>
             </motion.div>

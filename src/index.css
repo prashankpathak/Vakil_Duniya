@@ -55,3 +55,10 @@ body {
   color: white !important;
   margin: 0 !important;
 }
+
+/* Custom image replacement for Google Translate target language icon */
+#google_translate_element img,
+.goog-te-gadget img,
+div#google_translate_element [id*="targetLanguage"] img {
+  content: url('./assets/images/regenerated_image_1783168818243.gif') !important;
+}

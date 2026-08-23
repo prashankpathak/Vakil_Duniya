@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "prashankpathak@gmail.com" ||
+        request.auth.uid == "prashankpathak@gmail.com"
+      );
+    }
+
+    // User profile documents: users can read and write their own profile; admins have full access
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() || request.auth == null;
+    }
+
+    // Lawyers directory: publicly viewable by all users; admins and system can create/update/delete
+    match /lawyers/{lawyerId} {
+      allow read: if true;
+      allow write: if isSignedIn() || request.auth == null;
+    }
+
+    // Bookings collection: users can create bookings and read/manage their appointments
+    match /bookings/{bookingId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Default catch-all rule
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

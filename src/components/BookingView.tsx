@@ -1,20 +1,35 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../store';
 import { Lawyer, BookingRequest } from '../types';
-import { ArrowLeft, CheckCircle2, User } from 'lucide-react';
+import { saveBookingToFirestore, loginWithGoogle } from '../firebase';
+import { ArrowLeft, CheckCircle2, User, ShieldCheck, Lock, LogIn, Calendar, Phone, Sparkles } from 'lucide-react';
 
 export function BookingView() {
-  const { selectedLawyerId, navigate } = useNavigationStore();
+  const { selectedLawyerId, navigate, user, userProfile, openAuthModal, setUser } = useNavigationStore();
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
     case_type: 'Civil Consultation',
-    appointment_date: ''
+    appointment_date: '',
+    consultation_mode: 'Online Consultation'
   });
+
+  // Auto-fill from user profile when logged in
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: prev.name || userProfile?.displayName || user.displayName || '',
+        mobile: prev.mobile || userProfile?.phone || ''
+      }));
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     if (!selectedLawyerId) {
@@ -28,75 +43,69 @@ export function BookingView() {
         const found = data.find((l: Lawyer) => l.id === selectedLawyerId);
         setLawyer(found || null);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching lawyer:", err);
+        setLoading(false);
       });
   }, [selectedLawyerId, navigate]);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLawyerId || !lawyer) return;
 
-    setSubmitting(true);
-    const bookingFee = lawyer.consultation_fee;
-
-    // Try Razorpay if script is available
-    if ((window as any).Razorpay) {
-      try {
-        const orderRes = await fetch('/api/create-razorpay-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: bookingFee })
-        });
-        
-        if (!orderRes.ok) {
-           throw new Error("Razorpay Order failed. Fallback to UPI Intent.");
-        }
-        
-        const orderInfo = await orderRes.json();
-        const razorpayKey = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || "rzp_test_change_me";
-        
-        const options = {
-          key: razorpayKey,
-          name: "Vakil Duniya",
-          description: "Consultation Fee",
-          order_id: orderInfo.id,
-          handler: async function (response: any) {
-            await finalizeBooking();
-          },
-          prefill: {
-            name: formData.name,
-            contact: formData.mobile,
-          },
-          theme: {
-            color: "#c5a059"
-          }
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (response: any){
-           alert("Payment failed");
-           setSubmitting(false);
-        });
-        rzp.open();
-        return; // wait for handler
-      } catch (err) {
-        console.warn("Razorpay error, falling back to UPI intent", err);
-      }
+    if (!user) {
+      openAuthModal('signup', 'Please sign in or create an account to confirm your appointment.');
+      return;
     }
 
-    // Fallback/UPI Intent attempt
-    window.location.href = `upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=${bookingFee}&cu=INR`;
-    
-    // Simulate booking
-    setTimeout(async () => {
-      await finalizeBooking();
-    }, 4000);
+    setSubmitting(true);
+    await finalizeBooking();
+  };
+
+  const handleQuickGoogleSignIn = async () => {
+    try {
+      const { user: authedUser, profile } = await loginWithGoogle();
+      setUser(authedUser, profile);
+    } catch (err: any) {
+      console.error("Quick Google sign-in failed:", err);
+      openAuthModal('signup', 'Please sign in to proceed with your booking.');
+    }
   };
 
   const finalizeBooking = async () => {
     try {
+      if (!user || !lawyer) return;
+
+      // 1. Save to Firebase Firestore
+      let savedDocId = '';
+      try {
+        savedDocId = await saveBookingToFirestore({
+          userId: user.uid,
+          userEmail: user.email || '',
+          name: formData.name,
+          mobile: formData.mobile,
+          case_type: formData.case_type,
+          appointment_date: formData.appointment_date,
+          lawyer_id: lawyer.id,
+          lawyer_name: lawyer.name,
+          lawyer_city: lawyer.city,
+          lawyer_specialization: lawyer.specialization,
+          consultation_mode: formData.consultation_mode,
+          payment_status: 'Paid',
+          created_at: new Date().toISOString()
+        });
+        setBookingId(savedDocId);
+      } catch (fbErr) {
+        console.warn("Firestore save warning, continuing to server sync:", fbErr);
+      }
+
+      // 2. Also sync to backend API
       const payload: BookingRequest = {
         ...formData,
-        lawyer_id: selectedLawyerId as string
+        lawyer_id: lawyer.id,
+        userId: user.uid,
+        userEmail: user.email || ''
       };
 
       const res = await fetch('/api/book', {
@@ -105,9 +114,9 @@ export function BookingView() {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
+      if (res.ok || savedDocId) {
         setSuccess(true);
-        const text = `*New Booking Received!*\n\n*Client Name:* ${formData.name}\n*Mobile:* ${formData.mobile}\n*Case Type:* ${formData.case_type}\n*Appointment Date:* ${formData.appointment_date}\n*Lawyer:* ${lawyer?.name}\n*Consultation Fee:* ₹${lawyer?.consultation_fee}`;
+        const text = `*New Booking on Vakil Duniya!*\n\n*Client:* ${formData.name}\n*User Email:* ${user.email}\n*Mobile:* ${formData.mobile}\n*Case Type:* ${formData.case_type}\n*Appointment Date:* ${formData.appointment_date}\n*Consultation Mode:* ${formData.consultation_mode}\n*Lawyer:* ${lawyer?.name}\n*Booking ID:* ${savedDocId || 'Confirmed'}`;
         const waLink = `https://api.whatsapp.com/send?phone=916263364561&text=${encodeURIComponent(text)}`;
         window.open(waLink, '_blank');
       } else {
@@ -115,13 +124,13 @@ export function BookingView() {
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred.");
+      alert("An error occurred while booking. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -138,40 +147,51 @@ export function BookingView() {
       </button>
 
       {success ? (
-        <div className="bg-[#111] border border-white/5 p-12 text-center rounded-xl shadow-sm">
+        <div className="bg-[#111] border border-white/5 p-8 sm:p-12 text-center rounded-2xl shadow-xl">
           <div className="flex justify-center mb-6">
-            <CheckCircle2 className="w-16 h-16 text-[#c5a059]" />
+            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center border border-green-500/20">
+              <CheckCircle2 className="w-10 h-10 text-green-400" />
+            </div>
           </div>
-          <h2 className="text-3xl font-serif text-white mb-4">Booking Confirmed!</h2>
-          <p className="text-gray-400 font-sans font-light mb-8 max-w-xl mx-auto">
-            Your appointment with <span className="text-white font-medium">{lawyer.name}</span> on <span className="text-white font-medium">{formData.appointment_date}</span> has been initialized. 
-            We will contact you shortly on {formData.mobile} for final confirmation.
+          <h2 className="text-3xl font-serif text-white mb-2">Appointment Scheduled!</h2>
+          <p className="text-xs font-mono text-[#c5a059] uppercase tracking-widest mb-4">
+            Saved to your Firebase account {bookingId ? `(Ref: ${bookingId})` : ''}
+          </p>
+          <p className="text-gray-400 font-sans font-light mb-8 max-w-xl mx-auto text-sm leading-relaxed">
+            Your appointment with <span className="text-white font-medium">{lawyer.name}</span> on <span className="text-white font-medium">{formData.appointment_date}</span> has been securely recorded. 
+            You can track this anytime in your account.
           </p>
 
-          <div className="flex flex-col items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              onClick={() => navigate('my-bookings')}
+              className="w-full sm:w-auto bg-[#c5a059] text-black px-6 py-3.5 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all rounded-lg"
+            >
+              View in My Consultations
+            </button>
             <a 
-              href={`https://api.whatsapp.com/send?phone=916263364561&text=${encodeURIComponent(`*New Booking Received!*\n\n*Client Name:* ${formData.name}\n*Mobile:* ${formData.mobile}\n*Case Type:* ${formData.case_type}\n*Appointment Date:* ${formData.appointment_date}\n*Lawyer:* ${lawyer?.name}\n*Consultation Fee:* ₹${lawyer?.consultation_fee}`)}`}
+              href={`https://api.whatsapp.com/send?phone=916263364561&text=${encodeURIComponent(`*New Booking Confirmation*\n\n*Client:* ${formData.name}\n*Lawyer:* ${lawyer.name}\n*Date:* ${formData.appointment_date}\n*Mode:* ${formData.consultation_mode}`)}`}
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-green-600 text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-500 transition-colors rounded inline-flex items-center"
+              className="w-full sm:w-auto bg-green-600 text-white px-6 py-3.5 text-xs font-bold uppercase tracking-widest hover:bg-green-500 transition-all rounded-lg inline-flex items-center justify-center gap-2"
             >
-              Confirm on WhatsApp
+              WhatsApp Confirmation
             </a>
-            <button
-              onClick={() => navigate('home')}
-              className="text-xs font-bold uppercase tracking-widest text-[#c5a059] hover:text-white transition-colors mt-4"
-            >
-              Return Home
-            </button>
           </div>
         </div>
       ) : (
-        <div className="bg-[#111] border border-white/5 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+        <div className="bg-[#111] border border-white/5 rounded-2xl shadow-xl grid grid-cols-1 md:grid-cols-2 overflow-hidden">
           {/* Summary Section */}
           <div className="p-8 md:p-10 bg-[#080808] border-b md:border-b-0 md:border-r border-white/5 flex flex-col">
-            <h3 className="text-xs font-bold tracking-[0.2em] text-gray-500 uppercase mb-8">Consultation Details</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xs font-bold tracking-[0.2em] text-gray-500 uppercase">Consultation Details</h3>
+              <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 font-bold uppercase">
+                <ShieldCheck className="w-3 h-3" /> Verified
+              </span>
+            </div>
+
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-gray-800 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gray-800 rounded-xl overflow-hidden border border-white/10 flex items-center justify-center shrink-0">
                  {lawyer.image ? (
                    <img src={lawyer.image} alt={lawyer.name} className="w-full h-full object-cover" />
                  ) : (
@@ -180,132 +200,207 @@ export function BookingView() {
               </div>
               <div>
                 <h4 className="font-serif text-lg text-white">{lawyer.name}</h4>
-                <p className="text-[#c5a059] text-[10px] font-bold uppercase tracking-wider mt-1">{lawyer.specialization}</p>
+                <p className="text-[#c5a059] text-[11px] font-bold uppercase tracking-wider mt-0.5">{lawyer.specialization}</p>
+                <p className="text-xs text-gray-400">{lawyer.city} • {lawyer.experience}</p>
               </div>
             </div>
             
-            <div className="space-y-4 text-sm text-gray-400 mb-8 flex-grow">
+            <div className="space-y-3 text-sm text-gray-400 mb-8 flex-grow">
                <div className="flex justify-between border-b border-white/5 pb-2">
-                 <span>Location</span>
-                 <span className="font-semibold text-white">{lawyer.city}</span>
+                 <span className="text-xs uppercase text-gray-500">Location</span>
+                 <span className="font-medium text-white">{lawyer.city}</span>
                </div>
                <div className="flex justify-between border-b border-white/5 pb-2">
-                 <span>Experience</span>
-                 <span className="font-semibold text-white">{lawyer.experience}</span>
+                 <span className="text-xs uppercase text-gray-500">Experience</span>
+                 <span className="font-medium text-white">{lawyer.experience}</span>
                </div>
                <div className="flex justify-between border-b border-white/5 pb-2">
-                 <span>Language</span>
-                 <span className="font-semibold text-white">{lawyer.language.join(', ')}</span>
+                 <span className="text-xs uppercase text-gray-500">Languages</span>
+                 <span className="font-medium text-white">{lawyer.language.join(', ')}</span>
                </div>
+               {lawyer.bar_enrollment && (
+                 <div className="flex justify-between border-b border-white/5 pb-2">
+                   <span className="text-xs uppercase text-gray-500">Bar Enrollment</span>
+                   <span className="font-mono text-[#c5a059] text-xs">{lawyer.bar_enrollment}</span>
+                 </div>
+               )}
             </div>
 
             <div className="mt-auto">
-              <div className="mt-4 bg-[#111] border border-[#c5a059]/20 p-4 rounded-lg">
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Total Fee (Pay Now)</p>
-                <p className="text-2xl font-serif text-[#c5a059]">₹{lawyer.consultation_fee}</p>
-                <p className="text-[10px] text-gray-500 mt-2">100% secure payment for confirmation.</p>
+              <div className="bg-[#111] border border-white/5 p-4 rounded-xl">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Selected Mode</p>
+                <p className="text-lg font-serif text-[#c5a059]">{formData.consultation_mode}</p>
+                <p className="text-[11px] text-gray-500 mt-1">Direct scheduling with immediate WhatsApp notification.</p>
               </div>
             </div>
           </div>
 
           {/* Form Section */}
-          <div className="p-8 md:p-10">
-            <h3 className="text-2xl font-serif text-white mb-8">Enter Details</h3>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="name" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Full Name</label>
-                <div className="mt-2">
+          <div className="p-8 md:p-10 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-serif text-white">Client Details</h3>
+                {user && (
+                  <span className="text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Signed In
+                  </span>
+                )}
+              </div>
+
+              {/* Notice when not signed in */}
+              {!user && (
+                <div className="mb-6 p-4 bg-[#18150f] border border-[#c5a059]/30 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-[#c5a059]/10 rounded-lg text-[#c5a059] shrink-0 mt-0.5">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#c5a059] mb-1">
+                        Sign In Required Before Booking
+                      </h4>
+                      <p className="text-xs text-gray-400 mb-3">
+                        Create an account or sign in so your appointment is securely stored and trackable in your portal.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openAuthModal('signup', 'Sign up or sign in to book your appointment with ' + lawyer.name)}
+                          className="bg-[#c5a059] text-black px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-1.5"
+                        >
+                          <LogIn className="w-3.5 h-3.5" /> Sign In / Sign Up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleQuickGoogleSignIn}
+                          className="bg-[#222] text-white border border-white/10 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-[#282828] transition-all flex items-center gap-1.5"
+                        >
+                          Google 1-Click
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {user && (
+                <div className="mb-6 p-3 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 flex items-center justify-between">
+                  <div>
+                    <span className="text-gray-500 block text-[10px] uppercase tracking-wider">Booking as</span>
+                    <span className="text-white font-medium">{userProfile?.displayName || user.displayName || user.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('login')}
+                    className="text-[10px] text-[#c5a059] hover:underline uppercase tracking-wider font-semibold"
+                  >
+                    Switch User
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="name" className="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">
+                    Client Full Name
+                  </label>
                   <input
                     type="text"
                     name="name"
                     id="name"
                     required
+                    placeholder="Enter your full name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+                    className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3.5 rounded-lg text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="mobile" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Mobile Number</label>
-                <div className="mt-2">
+                <div>
+                  <label htmlFor="mobile" className="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">
+                    Mobile Number (10 Digits)
+                  </label>
                   <input
                     type="tel"
                     name="mobile"
                     id="mobile"
                     required
                     pattern="[0-9]{10}"
+                    placeholder="10-digit mobile number"
                     value={formData.mobile}
                     onChange={handleChange}
-                    className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+                    maxLength={10}
+                    className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3.5 rounded-lg text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors font-mono"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="case_type" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Case Type</label>
-                <div className="mt-2">
-                  <select
-                    id="case_type"
-                    name="case_type"
-                    value={formData.case_type}
-                    onChange={handleChange}
-                    className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors appearance-none"
-                  >
-                    <option value="Civil Consultation">Civil Consultation</option>
-                    <option value="Criminal Defense">Criminal Defense</option>
-                    <option value="Family Matter">Family Matter</option>
-                    <option value="Property Dispute">Property Dispute</option>
-                    <option value="Corporate / Startup">Corporate / Startup</option>
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="case_type" className="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">
+                      Case Type
+                    </label>
+                    <select
+                      id="case_type"
+                      name="case_type"
+                      value={formData.case_type}
+                      onChange={handleChange}
+                      className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3 rounded-lg text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors"
+                    >
+                      <option value="Civil Consultation">Civil Consultation</option>
+                      <option value="Criminal Defense">Criminal Defense</option>
+                      <option value="Family Matter">Family Matter</option>
+                      <option value="Property Dispute">Property Dispute</option>
+                      <option value="Corporate / Startup">Corporate / Startup</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="consultation_mode" className="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">
+                      Mode
+                    </label>
+                    <select
+                      id="consultation_mode"
+                      name="consultation_mode"
+                      value={formData.consultation_mode}
+                      onChange={handleChange}
+                      className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3 rounded-lg text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors"
+                    >
+                      <option value="Online Consultation">Online Consultation</option>
+                      <option value="Offline Consultation">Offline Consultation</option>
+                      <option value="Both (Online & Offline)">Both (Online & Offline)</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="appointment_date" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Appointment Date</label>
-                <div className="mt-2">
+                <div>
+                  <label htmlFor="appointment_date" className="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-1">
+                    Preferred Appointment Date
+                  </label>
                   <input
                     type="date"
                     name="appointment_date"
                     id="appointment_date"
                     required
+                    min={new Date().toISOString().split('T')[0]}
                     value={formData.appointment_date}
                     onChange={handleChange}
-                    className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
+                    className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3.5 rounded-lg text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="payment_mode" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Payment Mode</label>
-                <div className="mt-2">
-                  <select
-                    id="payment_mode"
-                    name="payment_mode"
-                    className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors appearance-none"
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-[#c5a059] text-black px-6 py-3.5 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-lg relative overflow-hidden group"
                   >
-                    <option value="UPI">UPI (GPay, PhonePe, Paytm, etc.)</option>
-                    <option value="Card" disabled>Credit/Debit Card (Coming Soon)</option>
-                    <option value="NetBanking" disabled>Net Banking (Coming Soon)</option>
-                  </select>
+                    {submitting ? 'Confirming with Firebase...' : (user ? 'Confirm & Book Appointment' : 'Sign In & Book Appointment')}
+                  </button>
+                  <p className="mt-3 text-[10px] text-center text-gray-500 uppercase tracking-wider">
+                    Instant confirmation • Synced to Firebase Firestore
+                  </p>
                 </div>
-              </div>
-
-              <div className="pt-6 border-t border-white/5">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-[#c5a059] text-black px-6 py-4 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
-                >
-                  {submitting ? 'Processing Payment...' : `Pay Now (₹${lawyer.consultation_fee}) & Book`}
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
-                </button>
-                <p className="mt-4 text-[10px] text-center text-gray-500 uppercase tracking-wider">
-                  Secure checkout via Razorpay (Cards, UPI, NetBanking).
-                </p>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}

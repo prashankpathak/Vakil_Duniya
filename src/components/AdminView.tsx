@@ -9,14 +9,14 @@ export function AdminView() {
   
   const [formData, setFormData] = useState({
     name: '',
-    specialization: 'Civil & Criminal',
+    specialization: 'Civil & Property Dispute',
     experience: '',
-    consultation_fee: 599,
     city: '',
     language: 'Hindi, English',
     image: '',
-    upi_id: '',
-    mobile_number: ''
+    mobile_number: '',
+    consultation_mode: 'Online Consultation',
+    bar_enrollment: ''
   });
 
   const handleChange = (e: any) => {
@@ -33,7 +33,7 @@ export function AdminView() {
         const orderRes = await fetch('/api/create-razorpay-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: 49 }) // Registration fee
+          body: JSON.stringify({ amount: 99 }) // Registration fee
         });
         
         if (!orderRes.ok) {
@@ -72,7 +72,7 @@ export function AdminView() {
     }
 
     // Fallback attempt to open UPI intent
-    window.location.href = "upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=49&cu=INR";
+    window.location.href = "upi://pay?pa=prashankpathak@fam&pn=Vakil%20Duniya&am=99&cu=INR";
     
     // Simulate payment passing and auto-registering
     setTimeout(async () => {
@@ -98,14 +98,14 @@ export function AdminView() {
         setSuccess(true);
         setFormData({
           name: '',
-          specialization: 'Civil & Criminal',
+          specialization: 'Civil & Property Dispute',
           experience: '',
-          consultation_fee: 599,
           city: '',
           language: 'Hindi, English',
           image: '',
-          upi_id: '',
-          mobile_number: ''
+          mobile_number: '',
+          consultation_mode: 'Online Consultation',
+          bar_enrollment: ''
         });
       } else {
         alert("Failed to add lawyer");
@@ -138,7 +138,7 @@ export function AdminView() {
         </div>
         <div className="bg-[#c5a059]/10 border border-[#c5a059]/30 rounded-lg p-4 shrink-0 text-center md:text-right">
            <div className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-1 font-bold">Platform Registration Fee</div>
-           <div className="text-3xl font-serif text-white">₹49</div>
+           <div className="text-3xl font-serif text-white">₹99</div>
         </div>
       </div>
 
@@ -177,9 +177,9 @@ export function AdminView() {
                   onChange={handleChange}
                   className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors appearance-none"
                 >
-                  <option value="Civil & Criminal">Civil & Criminal</option>
+                  <option value="Civil & Property Dispute">Civil & Property Dispute</option>
+                  <option value="Criminal Law">Criminal Law</option>
                   <option value="Family Matter">Family Matter</option>
-                  <option value="Property Dispute">Property Dispute</option>
                   <option value="Corporate Law">Corporate Law</option>
                 </select>
               </div>
@@ -234,34 +234,35 @@ export function AdminView() {
             </div>
 
             <div className="md:col-span-1">
-              <label htmlFor="upi_id" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Your UPI ID (For receiving payments)</label>
+              <label htmlFor="bar_enrollment" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Bar Enrollment Number</label>
               <div className="mt-2">
                 <input
                   type="text"
-                  name="upi_id"
-                  id="upi_id"
+                  name="bar_enrollment"
+                  id="bar_enrollment"
                   required
-                  placeholder="e.g. name@okhdfcbank"
-                  value={formData.upi_id}
+                  placeholder="e.g. MAH/1234/2020"
+                  value={formData.bar_enrollment}
                   onChange={handleChange}
                   className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
                 />
               </div>
             </div>
 
-            <div className="md:col-span-1">
-              <label htmlFor="consultation_fee" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Consultation Fee (₹)</label>
-              <div className="mt-2">
-                <input
-                  type="number"
-                  name="consultation_fee"
-                  id="consultation_fee"
-                  required
-                  min="0"
-                  value={formData.consultation_fee}
+            <div className="md:col-span-2">
+              <label htmlFor="consultation_mode" className="block text-xs font-bold tracking-widest uppercase text-gray-500 mb-2">Consultation Mode</label>
+              <div className="mt-2 text-white">
+                <select
+                  id="consultation_mode"
+                  name="consultation_mode"
+                  value={formData.consultation_mode}
                   onChange={handleChange}
-                  className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm placeholder:text-gray-600 focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors"
-                />
+                  className="block w-full bg-[#050505] border border-white/10 py-3 px-4 rounded text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] sm:text-sm transition-colors appearance-none"
+                >
+                  <option value="Online Consultation">Online Consultation</option>
+                  <option value="Offline Consultation">Offline Consultation</option>
+                  <option value="Both (Online & Offline)">Both (Online & Offline)</option>
+                </select>
               </div>
             </div>
 
@@ -322,7 +323,7 @@ export function AdminView() {
               className="w-full bg-[#c5a059] text-black px-6 py-4 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden group"
             >
               <Upload className="w-4 h-4" />
-              {submitting ? 'Processing Payment & Registering...' : 'Pay ₹49 & Auto Register'}
+              {submitting ? 'Processing Payment & Registering...' : 'Pay ₹99 & Auto Register'}
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
             </button>
             <p className="mt-2 text-[10px] text-center text-gray-500 uppercase tracking-wider">

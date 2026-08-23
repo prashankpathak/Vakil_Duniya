@@ -47,9 +47,9 @@ export function ServicesView() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10 w-full">
       <div className="border-b border-white/10 pb-5 mb-12 text-center max-w-3xl mx-auto mt-8">
-        <h2 className="text-4xl font-serif text-white">Legal Services & Pricing</h2>
+        <h2 className="text-4xl font-serif text-white">Legal Services</h2>
         <p className="mt-4 text-base text-gray-400 font-sans font-light">
-          Transparent pricing for expert consultation. Minimum fees to ensure accessible legal help.
+          Expert consultation for legal assistance. Professional guidance to ensure accessible legal help.
         </p>
       </div>
 
@@ -74,10 +74,6 @@ export function ServicesView() {
                 {iconMap[service.icon] || <Scale className="w-8 h-8" />}
               </div>
               <h3 className="text-xl font-serif text-white mb-4">{service.name}</h3>
-              <div className="mt-auto pt-6 border-t border-white/5 w-full">
-                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Starting Fee</p>
-                 <p className="text-3xl font-serif text-[#c5a059]">₹{service.fee}</p>
-              </div>
             </motion.div>
           ))}
         </motion.div>
