@@ -8,8 +8,12 @@ export type Page = 'home' | 'lawyers' | 'services' | 'book' | 'my-bookings' | 'a
 interface AppState {
   currentPage: Page;
   selectedLawyerId: string | null;
+  selectedCaseType: string | null;
+  lawyerCategoryFilter: string | null;
   navigate: (page: Page) => void;
-  bookLawyer: (lawyerId: string) => void;
+  bookLawyer: (lawyerId: string, caseType?: string) => void;
+  setSelectedCaseType: (caseType: string | null) => void;
+  setLawyerCategoryFilter: (filter: string | null) => void;
 
   // Firebase Auth State
   user: User | null;
@@ -31,10 +35,18 @@ interface AppState {
 export const useNavigationStore = create<AppState>((set, get) => ({
   currentPage: 'home',
   selectedLawyerId: null,
+  selectedCaseType: null,
+  lawyerCategoryFilter: null,
   navigate: (page: Page) => set({ currentPage: page }),
-  bookLawyer: (lawyerId: string) => {
+  setSelectedCaseType: (caseType: string | null) => set({ selectedCaseType: caseType }),
+  setLawyerCategoryFilter: (filter: string | null) => set({ lawyerCategoryFilter: filter }),
+  bookLawyer: (lawyerId: string, caseType?: string) => {
     const { user, openAuthModal } = get();
-    set({ selectedLawyerId: lawyerId, currentPage: 'book' });
+    set({ 
+      selectedLawyerId: lawyerId, 
+      selectedCaseType: caseType || null, 
+      currentPage: 'book' 
+    });
     if (!user) {
       openAuthModal('signup', 'Please sign in or create an account to book your consultation.');
     }

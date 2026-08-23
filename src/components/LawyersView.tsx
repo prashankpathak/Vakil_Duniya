@@ -26,7 +26,20 @@ export function LawyersView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
-  const { bookLawyer } = useNavigationStore();
+  const { bookLawyer, lawyerCategoryFilter, setLawyerCategoryFilter } = useNavigationStore();
+
+  useEffect(() => {
+    if (lawyerCategoryFilter) {
+      // Check if matches known civil or criminal
+      if (lawyerCategoryFilter.includes('Civil') || lawyerCategoryFilter.includes('Property')) {
+        setSelectedSpecialization('Civil & Property Law');
+      } else if (lawyerCategoryFilter.includes('Criminal') || lawyerCategoryFilter.includes('Bail')) {
+        setSelectedSpecialization('Criminal Law & Defense');
+      } else {
+        setSearchQuery(lawyerCategoryFilter);
+      }
+    }
+  }, [lawyerCategoryFilter]);
 
   useEffect(() => {
     // Initial fetch from Firestore / server

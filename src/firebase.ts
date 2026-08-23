@@ -26,31 +26,27 @@ import {
   onSnapshot,
   serverTimestamp
 } from "firebase/firestore";
+import firebaseConfig from "../firebase-applet-config.json";
 import { Lawyer, PlatformUser, AppointmentStatus } from "./types";
 
-// Web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDxy1CuUWCD72MSC3cGcRkIEGP7Mdus5bw",
-  authDomain: "vakil-duniya.firebaseapp.com",
-  projectId: "vakil-duniya",
-  storageBucket: "vakil-duniya.firebasestorage.app",
-  messagingSenderId: "285300350552",
-  appId: "1:285300350552:web:132a79dea2fd99f269342d"
-};
-
-// Initialize Firebase App & Auth
+// Initialize Firebase App & Auth with provisioned config
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Initialize Firestore with robust long-polling auto-detection for sandboxed/proxy environments
+const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 let firestoreDb;
 try {
   firestoreDb = initializeFirestore(app, {
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
-  });
+  }, databaseId);
 } catch (err) {
-  firestoreDb = getFirestore(app);
+  try {
+    firestoreDb = getFirestore(app, databaseId);
+  } catch (e) {
+    firestoreDb = getFirestore(app);
+  }
 }
 export const db = firestoreDb;
 

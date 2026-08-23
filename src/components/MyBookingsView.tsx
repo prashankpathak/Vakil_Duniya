@@ -112,7 +112,7 @@ export function MyBookingsView() {
                     <span className="text-[10px] font-mono text-gray-500 uppercase">
                       ID: {b.id?.slice(0, 10)}...
                     </span>
-                    {b.status === 'Accepted' || b.status === 'Confirmed' ? (
+                    {b.status === 'Accepted' ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
                         <CheckCircle2 className="w-3 h-3" /> Accepted / Confirmed
                       </span>

@@ -5,7 +5,7 @@ import { saveBookingToFirestore, loginWithGoogle } from '../firebase';
 import { ArrowLeft, CheckCircle2, User, ShieldCheck, Lock, LogIn, Calendar, Phone, Sparkles } from 'lucide-react';
 
 export function BookingView() {
-  const { selectedLawyerId, navigate, user, userProfile, openAuthModal, setUser } = useNavigationStore();
+  const { selectedLawyerId, selectedCaseType, navigate, user, userProfile, openAuthModal, setUser } = useNavigationStore();
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -15,7 +15,7 @@ export function BookingView() {
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
-    case_type: 'Civil Consultation',
+    case_type: selectedCaseType || 'Civil Consultation',
     appointment_date: '',
     consultation_mode: 'Online Consultation'
   });
@@ -343,13 +343,32 @@ export function BookingView() {
                       name="case_type"
                       value={formData.case_type}
                       onChange={handleChange}
-                      className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3 rounded-lg text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-sm transition-colors"
+                      className="block w-full bg-[#050505] border border-white/10 py-2.5 px-3 rounded-lg text-white shadow-sm focus:outline-none focus:border-[#c5a059] focus:ring-1 focus:ring-[#c5a059] text-xs sm:text-sm transition-colors"
                     >
-                      <option value="Civil Consultation">Civil Consultation</option>
-                      <option value="Criminal Defense">Criminal Defense</option>
-                      <option value="Family Matter">Family Matter</option>
-                      <option value="Property Dispute">Property Dispute</option>
-                      <option value="Corporate / Startup">Corporate / Startup</option>
+                      <optgroup label="🏛️ 1. सिविल मामले (Civil Law - दीवानी)">
+                        <option value="संपत्ति विवाद - पैतृक बंटवारा व कब्जा">संपत्ति विवाद - पैतृक बंटवारा व कब्जा</option>
+                        <option value="संपत्ति विवाद - स्टे ऑर्डर व टाइटल सूट">संपत्ति विवाद - स्टे ऑर्डर व टाइटल सूट</option>
+                        <option value="पारिवारिक - तलाक व भरण-पोषण (गुजारा भत्ता)">पारिवारिक - तलाक व भरण-पोषण (गुजारा भत्ता)</option>
+                        <option value="पारिवारिक - बच्चों की कस्टडी व गार्जियनशिप">पारिवारिक - बच्चों की कस्टडी व गार्जियनशिप</option>
+                        <option value="अनुबंध व व्यापार - धन वसूली व हर्जाना वाद">अनुबंध व व्यापार - धन वसूली व हर्जाना वाद</option>
+                        <option value="अनुबंध व व्यापार - एग्रीमेंट व पार्टनरशिप विवाद">अनुबंध व व्यापार - एग्रीमेंट व पार्टनरशिप विवाद</option>
+                        <option value="वसीयत व ड्राफ्टिंग - उत्तराधिकार प्रमाण पत्र">वसीयत व ड्राफ्टिंग - उत्तराधिकार प्रमाण पत्र</option>
+                        <option value="वसीयत व ड्राफ्टिंग - वाद पत्र (Plaint) व लिखित कथन (WS)">वसीयत व ड्राफ्टिंग - वाद पत्र (Plaint) व लिखित कथन</option>
+                      </optgroup>
+                      <optgroup label="🚨 2. क्रिमिनल मामले (Criminal Law - आपराधिक)">
+                        <option value="एफआईआर व जांच - एफआईआर दर्ज / जीरो एफआईआर">एफआईआर व जांच - एफआईआर दर्ज / जीरो एफआईआर</option>
+                        <option value="एफआईआर व जांच - धारा 156(3) CrPC मजिस्ट्रेट आवेदन">एफआईआर व जांच - धारा 156(3) CrPC आवेदन</option>
+                        <option value="जमानत - अग्रिम जमानत (Anticipatory Bail - Sec 438)">जमानत - अग्रिम जमानत (Anticipatory Bail)</option>
+                        <option value="जमानत - नियमित जमानत (Regular Bail - Sec 439)">जमानत - नियमित जमानत (Regular Bail)</option>
+                        <option value="ट्रायल व राहत - झूठी FIR रद्द (Quashing Sec 482 CrPC)">ट्रायल व राहत - झूठी FIR रद्द (Quashing Sec 482)</option>
+                        <option value="ट्रायल व राहत - डिस्चार्ज एप्लीकेशन व जिरह">ट्रायल व राहत - डिस्चार्ज एप्लीकेशन व जिरह</option>
+                        <option value="अपील व सजा - हाई कोर्ट में आपराधिक अपील">अपील व सजा - हाई कोर्ट में आपराधिक अपील</option>
+                      </optgroup>
+                      <optgroup label="अन्य सामान्य कानूनी परामर्श (General)">
+                        <option value="Civil Consultation">सामान्य सिविल परामर्श (General Civil)</option>
+                        <option value="Criminal Defense">सामान्य आपराधिक परामर्श (General Criminal)</option>
+                        <option value="Corporate / Startup">कॉर्पोरेट / स्टार्टअप व कंपनी लॉ</option>
+                      </optgroup>
                     </select>
                   </div>
 

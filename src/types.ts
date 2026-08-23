@@ -1,8 +1,42 @@
+export interface LegalSubService {
+  id: string;
+  titleHindi: string;
+  titleEnglish: string;
+  descriptionHindi?: string;
+  keyActsOrProvisions?: string;
+}
+
+export interface LegalServiceSubCategory {
+  id: string;
+  category: 'civil' | 'criminal';
+  titleHindi: string;
+  titleEnglish: string;
+  iconName: string;
+  descriptionHindi: string;
+  items: LegalSubService[];
+  feeStarting?: number;
+  badge?: string;
+}
+
+export interface LegalServiceMainCategory {
+  id: 'civil' | 'criminal';
+  categoryNumber: 1 | 2;
+  titleHindi: string;
+  titleEnglish: string;
+  badge: string;
+  iconName: string;
+  descriptionHindi: string;
+  subCategories: LegalServiceSubCategory[];
+}
+
 export interface Service {
   id: string;
   name: string;
-  fee: number;
+  fee?: number;
   icon: string;
+  category?: 'civil' | 'criminal';
+  hindiTitle?: string;
+  subItems?: string[];
 }
 
 export interface Lawyer {
@@ -12,7 +46,7 @@ export interface Lawyer {
   email?: string;
   specialization: string;
   experience: string;
-  consultation_fee: number;
+  consultation_fee?: number;
   city: string;
   state?: string;
   address?: string;

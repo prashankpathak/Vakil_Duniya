@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { BottomMobileNav } from './components/BottomMobileNav';
 import { HomeView } from './components/HomeView';
 import { LawyersView } from './components/LawyersView';
 import { ServicesView } from './components/ServicesView';
@@ -10,6 +11,7 @@ import { LawyerPortalView } from './components/LawyerPortalView';
 import { OwnerLoginView } from './components/OwnerLoginView';
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { ChatBot } from './components/ChatBot';
+import { FloatingMenu } from './components/FloatingMenu';
 import { AuthModal } from './components/AuthModal';
 import { useNavigationStore } from './store';
 import { AnimatePresence, motion } from 'motion/react';
@@ -35,7 +37,7 @@ export default function App() {
   }, [setUser, setAuthLoading]);
 
   return (
-    <div className="min-h-screen bg-[#050505] font-sans text-[#e0e0e0] flex flex-col relative">
+    <div className="min-h-screen bg-[#050505] font-sans text-[#e0e0e0] flex flex-col relative pb-16 lg:pb-0">
       {/* Background Subtle Texture */}
       <div className="fixed inset-0 opacity-5 pointer-events-none z-0">
         <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(#c5a059 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
@@ -68,7 +70,14 @@ export default function App() {
         {/* Global Auth Modal */}
         <AuthModal />
 
+        {/* AI Legal Assistant (Nyaya Sakha) */}
         <ChatBot />
+
+        {/* Moveable Floating Menu & Quick Access */}
+        <FloatingMenu />
+
+        {/* Mobile Persistent Bottom Bar for Tablets/Phones */}
+        <BottomMobileNav />
         
         {/* Bottom Bar Info / Footer */}
         <footer className="h-auto min-h-16 border-t border-white/5 px-4 sm:px-6 lg:px-12 py-4 flex flex-col lg:flex-row items-center justify-between bg-[#050505] mt-auto shrink-0 gap-4 lg:gap-0">

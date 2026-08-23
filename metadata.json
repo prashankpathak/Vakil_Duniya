@@ -1,6 +1,10 @@
 {
   "name": "Vakil Duniya",
-  "description": "Online legal appointment platform to book verified lawyers for consultation.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "Online legal appointment platform to book verified lawyers for consultation with AI Legal Assistant (Nyaya Sakha).",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
